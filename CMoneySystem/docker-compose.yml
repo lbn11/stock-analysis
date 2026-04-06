@@ -1,0 +1,239 @@
+# CMoney 股价预测系统 - Docker Compose 配置
+# 用于一键部署完整系统
+
+version: '3.8'
+
+services:
+  # ============================================
+  # 主应用服务
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: cmoney-app
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://cmoney:cmoney123@db:5432/cmoney
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-this}
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - app_data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================
+  # PostgreSQL 数据库
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: cmoney-db
+    environment:
+      - POSTGRES_DB=cmoney
+      - POSTGRES_USER=cmoney
+      - POSTGRES_PASSWORD=cmoney123
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cmoney"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Redis 缓存
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: cmoney-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================
+  # Nginx 反向代理
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: cmoney-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - app
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+
+  # ============================================
+  # Celery Worker（异步任务）
+  # ============================================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: cmoney-celery-worker
+    command: celery -A services.tasks worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://cmoney:cmoney123@db:5432/cmoney
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - app_data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+    deploy:
+      replicas: 2
+
+  # ============================================
+  # Celery Beat（定时任务）
+  # ============================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: cmoney-celery-beat
+    command: celery -A services.tasks beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://cmoney:cmoney123@db:5432/cmoney
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+
+  # ============================================
+  # ML Worker（机器学习专用）
+  # ============================================
+  ml-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ml-worker
+    container_name: cmoney-ml-worker
+    environment:
+      - DATABASE_URL=postgresql://cmoney:cmoney123@db:5432/cmoney
+      - REDIS_URL=redis://redis:6379/0
+      - WORKER_TYPE=ml
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ml_models:/app/models
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # ============================================
+  # Prometheus（监控）
+  # ============================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cmoney-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+
+  # ============================================
+  # Grafana（可视化监控）
+  # ============================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cmoney-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - cmoney-network
+
+# ============================================
+# 数据卷定义
+# ============================================
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_data:
+    driver: local
+  ml_models:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ============================================
+# 网络定义
+# ============================================
+networks:
+  cmoney-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

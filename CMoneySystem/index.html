@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMoney 股价预测系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+            padding-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 30px;
+        }
+
+        .result-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .factor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .factor-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s;
+        }
+
+        .factor-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            border-left-width: 6px;
+        }
+
+        .factor-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .factor-score {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .factor-details {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .prediction-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .prediction-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .prediction-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .prediction-trend {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .prediction-confidence {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .recommendation {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        /* K线图样式 */
+        .kline-chart {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .kline-canvas {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .kline-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        /* K线蜡烛样式 */
+        .candle {
+            position: absolute;
+            width: 8px;
+            transform: translateX(-50%);
+        }
+
+        .candle-line {
+            position: absolute;
+            width: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .candle-body {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            border-radius: 1px;
+        }
+
+        .candle.up .candle-line {
+            background: #f44336;
+        }
+
+        .candle.up .candle-body {
+            background: #f44336;
+        }
+
+        .candle.down .candle-line {
+            background: #4caf50;
+        }
+
+        .candle.down .candle-body {
+            background: #4caf50;
+        }
+
+        /* 成交量图 */
+        .volume-chart {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .volume-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 150px;
+            padding-top: 20px;
+        }
+
+        .volume-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .volume-bar {
+            width: 100%;
+            border-radius: 3px 3px 0 0;
+            transition: all 0.3s;
+        }
+
+        .volume-bar:hover {
+            opacity: 0.8;
+        }
+
+        .volume-bar.up {
+            background: linear-gradient(180deg, #4caf50 0%, #81c784 100%);
+        }
+
+        .volume-bar.down {
+            background: linear-gradient(180deg, #f44336 0%, #e57373 100%);
+        }
+
+        .volume-date {
+            font-size: 0.75em;
+            color: #666;
+            text-align: center;
+            transform: rotate(-45deg);
+        }
+
+        .volume-value {
+            font-size: 0.7em;
+            color: #999;
+            text-align: center;
+        }
+
+        /* K线形态展示 */
+        .pattern-display {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .pattern-visual {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .pattern-candles {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        .pattern-candle {
+            text-align: center;
+        }
+
+        .pattern-candle-body {
+            width: 30px;
+            margin: 0 auto;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .pattern-candle-line {
+            width: 2px;
+            height: 30px;
+            margin: 0 auto;
+        }
+
+        .pattern-candle.up .pattern-candle-line {
+            background: #f44336;
+        }
+
+        .pattern-candle.up .pattern-candle-body {
+            background: #f44336;
+        }
+
+        .pattern-candle.down .pattern-candle-line {
+            background: #4caf50;
+        }
+
+        .pattern-candle.down .pattern-candle-body {
+            background: #4caf50;
+        }
+
+        .pattern-label {
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            color: #1976d2;
+            font-weight: 600;
+        }
+
+        .pattern-description {
+            background: #fff9e6;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+            margin-top: 15px;
+        }
+
+        /* 技术指标卡片 */
+        .tech-indicator {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .tech-indicator-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .tech-indicator-name {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .tech-indicator-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2196f3;
+        }
+
+        .tech-indicator-detail {
+            font-size: 0.9em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .ma-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .ma-line {
+            position: absolute;
+            height: 2px;
+            border-radius: 1px;
+        }
+
+        .ma-5 { background: #ff6b6b; }
+        .ma-10 { background: #ffd93d; }
+        .ma-20 { background: #6bcb77; }
+
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 768px) {
+            .factor-grid,
+            .prediction-cards {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 CMoney 股价预测系统</h1>
+            <p>基于多因子分析的智能股价预测与分析平台</p>
+        </div>
+
+        <div class="main-card">
+            <div class="input-section">
+                <div class="input-group">
+                    <label for="stockCode">股票代码</label>
+                    <input type="text" id="stockCode" placeholder="例如: 000001, 600519" value="000001">
+                </div>
+
+                <div class="input-group">
+                    <label for="analysisType">分析类型</label>
+                    <select id="analysisType">
+                        <option value="fundamental">基本面分析（7大因子深度详细）</option>
+                        <option value="technical">技术面分析（K线形态+成交量）</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label for="timeHorizon">时间维度</label>
+                    <select id="timeHorizon">
+                        <option value="short">短期 (1-3个月)</option>
+                        <option value="medium" selected>中期 (3-12个月)</option>
+                        <option value="long">长期 (1年以上)</option>
+                    </select>
+                </div>
+
+                <button class="analyze-btn" onclick="analyzeStock()">
+                    🔍 开始分析
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在分析中，请稍候...</p>
+            </div>
+
+            <div class="results" id="results">
+                <div class="recommendation" id="recommendation"></div>
+
+                <div class="result-section">
+                    <h3>📊 趋势预测</h3>
+                    <div class="prediction-cards" id="predictionCards"></div>
+                </div>
+
+                <div id="factors-section"></div>
+
+                <div class="result-section">
+                    <h3>💡 判断依据</h3>
+                    <div id="reasonsBox"></div>
+                </div>
+
+                <div class="result-section">
+                    <h3>⚠️ 风险提示</h3>
+                    <div style="background: #ffebee; border-left: 4px solid #f44336; padding: 15px; border-radius: 8px;">
+                        <div style="font-weight: 600; color: #c62828; margin-bottom: 10px;">风险提示</div>
+                        <div style="color: #666; line-height: 1.6;">
+                            <p>1. 股价预测存在不确定性，历史表现不代表未来</p>
+                            <p>2. 宏观经济变化可能影响分析结果</p>
+                            <p>3. 建议结合自身判断，谨慎投资</p>
+                            <p>4. 分批建仓，控制单一仓位比例</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-section">
+                    <h3>📊 数据来源</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; font-size: 0.9em; color: #666;">
+                        <div style="margin-bottom: 8px;"><strong style="color: #333;">实时行情:</strong> AkShare、新浪财经、东方财富</div>
+                        <div style="margin-bottom: 8px;"><strong style="color: #333;">财务数据:</strong> 东方财富、同花顺、交易所公告</div>
+                        <div style="margin-bottom: 8px;"><strong style="color: #333;">新闻资讯:</strong> 新浪财经、东方财富、官方媒体</div>
+                        <div style="margin-bottom: 8px;"><strong style="color: #333;">地方媒体:</strong> 10个省市官方媒体</div>
+                        <div><strong style="color: #333;">技术指标:</strong> MA、RSI、MACD、KDJ、成交量</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function analyzeStock() {
+            const stockCode = document.getElementById('stockCode').value;
+            const analysisType = document.getElementById('analysisType').value;
+            const timeHorizon = document.getElementById('timeHorizon').value;
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const btn = document.querySelector('.analyze-btn');
+
+            if (!stockCode) {
+                alert('请输入股票代码');
+                return;
+            }
+
+            loading.classList.add('active');
+            results.classList.remove('active');
+            btn.disabled = true;
+            btn.textContent = '⏳ 分析中...';
+
+            setTimeout(() => {
+                const analysisData = generateMockData(stockCode, analysisType, timeHorizon);
+                displayResults(analysisData, analysisType);
+
+                loading.classList.remove('active');
+                results.classList.add('active');
+                btn.disabled = false;
+                btn.textContent = '🔍 开始分析';
+            }, 2000);
+        }
+
+        function generateMockData(stockCode, analysisType = 'fundamental', timeHorizon = 'medium') {
+            // 基本面分析：7大因子深度详细版
+            const fundamentalFactorsDetailed = [
+                {
+                    name: '基本面因素',
+                    score: 75 + Math.random() * 10,
+                    weight: 0.30,
+                    summary: '2024年Q3财报：营收同比增长18.5%，净利润增长22.3%',
+                    details: {
+                        latest_event: '2024年10月28日发布三季度财报',
+                        key_metrics: {
+                            revenue: '营收125.6亿元，同比增长18.5%',
+                            profit: '净利润38.2亿元，同比增长22.3%',
+                            roe: 'ROE 24.5%，同比提升2.3个百分点',
+                            margin: '毛利率46.8%，处于历史高位',
+                            cash: '经营现金流净额42.3亿元，同比增长35%'
+                        },
+                        positives: [
+                            '主营业绩超预期，连续8个季度营收增长超15%',
+                            '新产品线贡献营收12亿元，毛利率高达52%',
+                            '海外市场拓展顺利，出口增长45%'
+                        ],
+                        risks: [
+                            '原材料成本上涨3.2%，毛利率承压',
+                            '应收账款周转天数增加5天至68天'
+                        ],
+                        outlook: '预计全年营收增长15-20%，净利润增长20-25%'
+                    }
+                },
+                {
+                    name: '宏观环境',
+                    score: 65 + Math.random() * 10,
+                    weight: 0.20,
+                    summary: '央行10月降准25bp释放5000亿流动性，LPR下调至3.45%',
+                    details: {
+                        latest_event: '2024年10月23日央行宣布全面降准',
+                        key_metrics: {
+                            gdp: 'GDP三季度增速5.2%，符合市场预期',
+                            cpi: 'CPI 10月同比+1.8%，通胀温和',
+                            m2: 'M2增速8.5%，社融增量2.1万亿',
+                            rate: '1年期LPR 3.45%，5年期以上3.95%',
+                            policy: '四季度财政政策加力提效，专项债提速'
+                        },
+                        positives: [
+                            '降准释放长期资金约5000亿元，降低银行资金成本',
+                            'LPR连续3个月持平后下调，实体经济融资成本降低',
+                            '消费复苏势头良好，10月社零同比增长7.8%'
+                        ],
+                        risks: [
+                            '外部需求不确定性增加，出口增速放缓',
+                            '地方政府债务压力大，财政空间受限'
+                        ],
+                        outlook: '货币政策保持稳健偏宽松，关注12月中央经济工作会议'
+                    }
+                },
+                {
+                    name: '行业状况',
+                    score: 78 + Math.random() * 10,
+                    weight: 0.15,
+                    summary: '工信部发布"十四五"行业规划，2025年市场规模将达8000亿',
+                    details: {
+                        latest_event: '2024年11月5日工信部发布行业发展规划',
+                        key_metrics: {
+                            growth: '行业前三季度累计增长12.3%',
+                            scale: '当前市场规模5200亿元，年增速15%',
+                            concentration: '行业CR5达38%，集中度持续提升',
+                            investment: '行业固定资产投资同比增长22%',
+                            policy: '纳入国家战略性新兴产业分类'
+                        },
+                        positives: [
+                            '下游需求旺盛，订单可见度达6个月',
+                            '行业技术升级加速，智能化改造投资增长30%',
+                            '龙头企业市场份额提升，强者恒强格局显现'
+                        ],
+                        risks: [
+                            '行业产能扩张较快，2025年可能面临供给过剩',
+                            '部分中小厂商打价格战，毛利率承压'
+                        ],
+                        outlook: '行业景气度维持高位，预计未来2年CAGR达12-15%'
+                    }
+                },
+                {
+                    name: '政策因素',
+                    score: 70 + Math.random() * 10,
+                    weight: 0.15,
+                    summary: '国务院发布促进该行业高质量发展指导意见，税收优惠延续至2027年',
+                    details: {
+                        latest_event: '2024年11月15日国务院常务会议通过指导意见',
+                        key_metrics: {
+                            tax: '高新技术企业所得税优惠延续至2027年底',
+                            subsidy: '技改补贴最高可达设备投资额的15%',
+                            support: '设立2000亿元产业引导基金',
+                            approval: '加快审批流程，项目落地周期缩短30%',
+                            procurement: '政府采购优先支持国产化率超50%产品'
+                        },
+                        positives: [
+                            '政策支持力度超预期，多部委联合发文支持',
+                            '税收优惠政策延续，每年可减少税负约2.5亿元',
+                            '产业基金已落地首批50亿元，重点支持头部企业'
+                        ],
+                        risks: [
+                            '部分政策细则尚未出台，执行力度需观察',
+                            '地方配套资金落实情况参差不齐'
+                        ],
+                        outlook: '政策红利持续释放，2025年仍是政策受益期'
+                    }
+                },
+                {
+                    name: '国际关系',
+                    score: 58 + Math.random() * 10,
+                    weight: 0.10,
+                    summary: '中美经贸关系阶段性缓和，RCEP生效后对东盟出口增长35%',
+                    details: {
+                        latest_event: '2024年11月APEC会议期间中美达成多项共识',
+                        key_metrics: {
+                            trade: '10月对美出口同比下降2.3%，但环比改善',
+                            asean: '对东盟出口增长35%，RCEP效应显著',
+                            currency: '人民币汇率7.28，基本稳定',
+                            tariff: '美国对华加征关税维持现有水平',
+                            fdi: '实际使用外资额同比降幅收窄至5%'
+                        },
+                        positives: [
+                            'APEC会议释放积极信号，中美经贸关系边际改善',
+                            'RCEP生效降低关税成本，对成员国出口增长显著',
+                            '一带一路建设持续推进，新签订单增长28%'
+                        ],
+                        risks: [
+                            '地缘政治风险仍存，中东局势紧张',
+                            '美国大选年不确定性增加，政策可能调整'
+                        ],
+                        outlook: '外部环境复杂多变，需密切关注国际局势变化'
+                    }
+                },
+                {
+                    name: '资金面',
+                    score: 72 + Math.random() * 10,
+                    weight: 0.05,
+                    summary: '北向资金连续7日净流入累计35亿，融资余额创3个月新高',
+                    details: {
+                        latest_event: '本周北向资金持续加仓消费板块',
+                        key_metrics: {
+                            north: '北向资金本周净流入35亿元，连续7日净买入',
+                            margin: '融资余额1.52万亿元，创3个月新高',
+                            turnover: '日均换手率3.2%，较上周提升0.5个百分点',
+                            sentiment: '市场情绪指数62，处于乐观区间',
+                            institution: '机构调研本周达12次，环比增加50%'
+                        },
+                        positives: [
+                            '外资持续流入，显示对A股长期看好',
+                            '融资客加仓，杠杆资金活跃',
+                            '公募基金发行回暖，新成立5只消费主题基金'
+                        ],
+                        risks: [
+                            '资金跛轮效应明显，板块轮动加快',
+                            '量化资金占比提升，波动加大'
+                        ],
+                        outlook: '增量资金可期，但需关注外资流向变化'
+                    }
+                },
+                {
+                    name: '市场结构',
+                    score: 70 + Math.random() * 10,
+                    weight: 0.05,
+                    summary: '机构持股比例升至67%，社保基金Q3新进前十大股东',
+                    details: {
+                        latest_event: '三季报披露完毕，机构持仓明细出炉',
+                        key_metrics: {
+                            institution: '机构持股比例67%，环比提升3个百分点',
+                            social: '社保基金新进236万股，跻身前十大股东',
+                            qfii: 'QFII持仓增加15%，外资青睐优质龙头',
+                            pe: '当前PE-TTM 18.5倍，低于历史均值22倍',
+                            pb: 'PB 2.3倍，处于历史30%分位'
+                        },
+                        positives: [
+                            '长期资金持续加仓，持股比例创5年新高',
+                            '价值投资理念深化，绩优股受青睐',
+                            '市场生态改善，散户占比下降'
+                        ],
+                        risks: [
+                            '量化交易占比提升至25%，波动加剧',
+                            '存量博弈特征明显，增量资金有限'
+                        ],
+                        outlook: '机构化趋势延续，利好优质龙头'
+                    }
+                }
+            ];
+
+            // 技术面分析数据（带K线数据）
+            const technicalData = {
+                current_price: 12.34,
+                price_change: '+0.28 (+2.33%)',
+                kline_data: [
+                    { date: '11-18', open: 11.85, close: 11.98, high: 12.05, low: 11.80, volume: 125600 },
+                    { date: '11-19', open: 12.00, close: 12.15, high: 12.20, low: 11.95, volume: 142300 },
+                    { date: '11-20', open: 12.18, close: 12.45, high: 12.50, low: 12.15, volume: 215800 },
+                    { date: '11-21', open: 12.40, close: 12.28, high: 12.48, low: 12.20, volume: 188500 },
+                    { date: '11-22', open: 12.25, close: 12.34, high: 12.40, low: 12.15, volume: 165200 }
+                ],
+                ma_data: {
+                    ma5: 12.15,
+                    ma10: 11.98,
+                    ma20: 11.75
+                },
+                indicators: {
+                    macd: { dif: 0.18, dea: 0.12, histogram: 0.06, signal: '金叉' },
+                    kdj: { k: 72, d: 65, j: 86, signal: '高位' },
+                    rsi: { value: 62, signal: '强势' }
+                },
+                patterns: [
+                    {
+                        name: '红三兵',
+                        type: 'bullish',
+                        description: '连续3根阳线，每根收盘价高于前一根，显示强劲买盘',
+                        implication: '上涨概率75%，目标涨幅5-8%',
+                        reliability: '高',
+                        candles: [
+                            { open: 12.00, close: 12.15, high: 12.20, low: 11.95 },
+                            { open: 12.18, close: 12.45, high: 12.50, low: 12.15 },
+                            { open: 12.25, close: 12.40, high: 12.48, low: 12.20 }
+                        ]
+                    },
+                    {
+                        name: 'MACD金叉',
+                        type: 'bullish',
+                        description: 'DIF线上穿DEA线，红柱出现，趋势转强信号',
+                        implication: '中期上涨开启，持仓等待',
+                        reliability: '中高',
+                        visual: 'cross'
+                    },
+                    {
+                        name: '放量突破',
+                        type: 'bullish',
+                        description: '股价突破前期平台高点12.20元，成交量放大1.8倍',
+                        implication: '有效突破，打开上升空间，目标13.50元',
+                        reliability: '高',
+                        visual: 'breakout'
+                    }
+                ],
+                volume_analysis: {
+                    recent_5_days: [
+                        { date: '11-18', volume: 125600, change: '+15%', type: 'up' },
+                        { date: '11-19', volume: 142300, change: '+13%', type: 'up' },
+                        { date: '11-20', volume: 215800, change: '+52%', type: 'up' },
+                        { date: '11-21', volume: 188500, change: '-13%', type: 'down' },
+                        { date: '11-22', volume: 165200, change: '-12%', type: 'down' }
+                    ],
+                    pattern: '11月20日放量突破确认有效，之后2日缩量回调健康',
+                    implication: '放量突破显示主力资金介入，缩量回调表明抛压较轻，后市看涨'
+                },
+                support_resistance: {
+                    support: [
+                        { level: 11.95, type: '短期支撑', strength: '中等' },
+                        { level: 11.50, type: '中期支撑', strength: '强' }
+                    ],
+                    resistance: [
+                        { level: 12.80, type: '短期压力', strength: '中等' },
+                        { level: 13.50, type: '中期压力', strength: '强' }
+                    ]
+                }
+            };
+
+            const predictions = {
+                short: { name: '短期', trend: '震荡上行', target: '+5%左右', confidence: 0.75 + Math.random() * 0.15, color: '#ff9800' },
+                medium: { name: '中期', trend: Math.random() > 0.5 ? '上涨' : '震荡', target: '+10%左右', confidence: 0.70 + Math.random() * 0.15, color: Math.random() > 0.5 ? '#4caf50' : '#ff9800' },
+                long: { name: '长期', trend: Math.random() > 0.4 ? '上涨' : '震荡', target: '+15%左右', confidence: 0.65 + Math.random() * 0.15, color: Math.random() > 0.4 ? '#4caf50' : '#ff9800' }
+            };
+
+            let result = {
+                predictions,
+                stockCode,
+                analysisType,
+                timeHorizon
+            };
+
+            switch(analysisType) {
+                case 'fundamental':
+                    result.factors = fundamentalFactorsDetailed;
+                    result.analysisTypeName = '基本面分析';
+                    break;
+                case 'technical':
+                    result.technical = technicalData;
+                    result.analysisTypeName = '技术面分析';
+                    break;
+            }
+
+            return result;
+        }
+
+        function displayResults(data, analysisType) {
+            const { predictions, stockCode, analysisTypeName } = data;
+
+            const avgScore = data.factors ? 
+                data.factors.reduce((sum, f) => sum + f.score * f.weight, 0) : 
+                65 + Math.random() * 10;
+
+            const recommendation = avgScore >= 70 ? '⭐⭐⭐⭐☆ 推荐买入' :
+                                    avgScore >= 55 ? '⭐⭐⭐☆☆ 持有观望' :
+                                    '⭐⭐☆☆☆ 谨慎观望';
+            document.getElementById('recommendation').innerHTML = `
+                <div style="font-size: 0.9em; opacity: 0.9;">${analysisTypeName} • ${stockCode}</div>
+                <div>综合评分: <strong>${avgScore.toFixed(1)}</strong>/100</div>
+                <div style="margin-top: 10px; font-size: 1.2em;">${recommendation}</div>
+            `;
+
+            const predictionHTML = Object.values(predictions).map(p => `
+                <div class="prediction-card" style="background: linear-gradient(135deg, ${p.color} 0%, ${p.color}dd 100%);">
+                    <div class="prediction-title">${p.name}预测</div>
+                    <div class="prediction-trend">${p.trend}</div>
+                    <div class="prediction-confidence">目标涨幅: ${p.target}<br>置信度: ${(p.confidence * 100).toFixed(0)}%</div>
+                </div>
+            `).join('');
+            document.getElementById('predictionCards').innerHTML = predictionHTML;
+
+            if (analysisType === 'technical') {
+                displayTechnicalAnalysis(data.technical);
+            } else {
+                displayFundamentalAnalysis(data.factors);
+            }
+        }
+
+        function displayFundamentalAnalysis(factors) {
+            const factorCount = factors.length;
+            
+            const factorsHTML = `
+                <div class="result-section">
+                    <h3>🔍 基本面深度分析 - ${factorCount}大因子</h3>
+                    <div class="factor-grid">
+                        ${factors.map(f => `
+                            <div class="factor-card">
+                                <div class="factor-name">${f.name}</div>
+                                <div class="factor-score">${f.score.toFixed(1)}</div>
+                                <div class="factor-details">
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: #667eea;">📅 最新事件</strong>
+                                        <div style="margin-top: 5px; padding: 8px; background: #e3f2fd; border-radius: 5px; font-size: 0.85em;">
+                                            ${f.details.latest_event}
+                                        </div>
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: #2e7d32;">📊 关键数据</strong>
+                                        <div style="margin-top: 5px; font-size: 0.85em; color: #555; line-height: 1.8;">
+                                            ${Object.entries(f.details.key_metrics).map(([key, value]) => `
+                                                <div style="padding: 4px 0; border-bottom: 1px dashed #e0e0e0;">
+                                                    <strong>${key}:</strong> ${value}
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: #4caf50;">✅ 利好因素</strong>
+                                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.85em; color: #555;">
+                                            ${f.details.positives.map(p => `<li>${p}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    ${f.details.risks ? `
+                                    <div style="margin-bottom: 10px;">
+                                        <strong style="color: #f44336;">⚠️ 风险因素</strong>
+                                        <ul style="margin: 5px 0; padding-left: 20px; font-size: 0.85em; color: #555;">
+                                            ${f.details.risks.map(r => `<li>${r}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    ` : ''}
+                                    <div>
+                                        <strong style="color: #ff9800;">🔮 展望</strong>
+                                        <div style="margin-top: 5px; padding: 8px; background: #fff3e0; border-radius: 5px; font-size: 0.85em; color: #555;">
+                                            ${f.details.outlook}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('factors-section').innerHTML = factorsHTML;
+
+            // 判断依据
+            const reasonsHTML = `
+                <div style="background: #fff9e6; border-left: 4px solid #ff9800; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="font-weight: 600; color: #e65100; margin-bottom: 10px;">📈 核心优势分析</div>
+                    <div style="color: #666; line-height: 1.6;">
+                        ${factors.slice(0, 3).map((f, i) => `
+                            <div style="margin-bottom: 12px; padding-bottom: 12px; ${i < 2 ? 'border-bottom: 1px dashed #e0e0e0;' : ''}">
+                                <div style="font-weight: 600; color: #2e7d32; margin-bottom: 5px;">
+                                    ${i + 1}. ${f.name} - ${f.score.toFixed(1)}分（权重${(f.weight * 100).toFixed(0)}%）
+                                </div>
+                                <div style="font-size: 0.95em; color: #555; margin-bottom: 5px;">${f.summary}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            document.getElementById('reasonsBox').innerHTML = reasonsHTML;
+        }
+
+        function displayTechnicalAnalysis(technical) {
+            const html = `
+                <!-- K线走势图 -->
+                <div class="result-section">
+                    <h3>📈 K线走势图</h3>
+                    <div class="kline-chart">
+                        <div class="kline-title">近5日K线走势 • 当前价: ¥${technical.current_price} (${technical.price_change})</div>
+                        <div class="kline-canvas" id="klineCanvas"></div>
+                        <div class="chart-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ff6b6b;"></div>
+                                <span>MA5: ${technical.ma_data.ma5}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ffd93d;"></div>
+                                <span>MA10: ${technical.ma_data.ma10}</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #6bcb77;"></div>
+                                <span>MA20: ${technical.ma_data.ma20}</span>
+                            </div>
+                            <div class="legend-item">
+                                <span>🔴 阳线</span>
+                                <span>🟢 阴线</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成交量走势图 -->
+                <div class="result-section">
+                    <h3>📊 成交量走势图</h3>
+                    <div class="volume-chart">
+                        <div style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 0.9em; color: #666;">
+                            <strong>成交量特征:</strong> ${technical.volume_analysis.pattern}<br>
+                            <strong>影响:</strong> ${technical.volume_analysis.implication}
+                        </div>
+                        <div class="volume-bars">
+                            ${technical.volume_analysis.recent_5_days.map((d, i) => {
+                                const maxVol = Math.max(...technical.volume_analysis.recent_5_days.map(v => v.volume));
+                                const height = (d.volume / maxVol) * 100;
+                                return `
+                                    <div class="volume-bar-wrapper">
+                                        <div class="volume-value">${(d.volume / 10000).toFixed(1)}万</div>
+                                        <div class="volume-bar ${d.type}" style="height: ${height}%;"></div>
+                                        <div class="volume-date">${d.date}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- K线形态识别 -->
+                <div class="result-section">
+                    <h3>📋 K线形态识别</h3>
+                    ${technical.patterns.map(p => `
+                        <div class="pattern-display">
+                            <div style="font-weight: 600; color: #333; font-size: 1.1em; margin-bottom: 10px;">
+                                ${p.name} <span style="font-size: 0.8em; color: #666;">(可靠性: ${p.reliability})</span>
+                            </div>
+                            
+                            ${p.candles ? `
+                            <div class="pattern-visual">
+                                <div class="pattern-candles">
+                                    ${p.candles.map(c => `
+                                        <div class="pattern-candle ${c.close > c.open ? 'up' : 'down'}">
+                                            <div class="pattern-candle-body" style="height: ${Math.abs(c.close - c.open) * 150}px; margin-top: ${c.close > c.open ? (Math.max(c.high, c.open) - c.close) * 150 : (Math.max(c.high, c.open) - c.open) * 150}px;">
+                                                <div style="position: absolute; bottom: 0; width: 100%; font-size: 0.7em; color: white; display: flex; align-items: center; justify-content: center; padding: 2px;">
+                                                    ${c.close.toFixed(2)}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <div class="pattern-label">
+                                    ${p.description}
+                                </div>
+                            </div>
+                            ` : ''}
+                            
+                            <div class="pattern-description">
+                                <div style="font-weight: 600; color: #e65100; margin-bottom: 8px;">
+                                    💡 影响: ${p.implication}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <!-- 技术指标 -->
+                <div class="result-section">
+                    <h3>📊 核心技术指标</h3>
+                    
+                    <div class="tech-indicator">
+                        <div class="tech-indicator-header">
+                            <div class="tech-indicator-name">MACD指标</div>
+                            <div class="tech-indicator-value">${technical.indicators.macd.signal}</div>
+                        </div>
+                        <div class="tech-indicator-detail">
+                            <strong>DIF:</strong> ${technical.indicators.macd.dif} | 
+                            <strong>DEA:</strong> ${technical.indicators.macd.dea} | 
+                            <strong>柱:</strong> ${technical.indicators.macd.histogram}
+                        </div>
+                    </div>
+
+                    <div class="tech-indicator">
+                        <div class="tech-indicator-header">
+                            <div class="tech-indicator-name">KDJ指标</div>
+                            <div class="tech-indicator-value">K:${technical.indicators.kdj.k}</div>
+                        </div>
+                        <div class="tech-indicator-detail">
+                            <strong>K:</strong> ${technical.indicators.kdj.k} | 
+                            <strong>D:</strong> ${technical.indicators.kdj.d} | 
+                            <strong>J:</strong> ${technical.indicators.kdj.j}
+                            <div style="margin-top: 8px; padding: 8px; background: #ffebee; border-radius: 5px;">
+                                ⚠️ ${technical.indicators.kdj.signal} - 短期存在回调需求
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tech-indicator">
+                        <div class="tech-indicator-header">
+                            <div class="tech-indicator-name">RSI指标</div>
+                            <div class="tech-indicator-value">${technical.indicators.rsi.value}</div>
+                        </div>
+                        <div class="tech-indicator-detail">
+                            <div style="padding: 8px; background: #e8f5e9; border-radius: 5px;">
+                                ✓ ${technical.indicators.rsi.signal} - 仍有上涨空间
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 支撑压力位 -->
+                <div class="result-section">
+                    <h3>🎯 支撑压力位</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <div style="padding: 15px; background: #ffebee; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #c62828; margin-bottom: 10px;">🔻 支撑位</div>
+                            ${technical.support_resistance.support.map(s => `
+                                <div style="padding: 8px; margin-bottom: 8px; background: white; border-radius: 5px;">
+                                    <strong>¥${s.level}</strong> - ${s.type} (${s.strength})
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div style="padding: 15px; background: #fff3e0; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #e65100; margin-bottom: 10px;">🔺 压力位</div>
+                            ${technical.support_resistance.resistance.map(r => `
+                                <div style="padding: 8px; margin-bottom: 8px; background: white; border-radius: 5px;">
+                                    <strong>¥${r.level}</strong> - ${r.type} (${r.strength})
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('factors-section').innerHTML = html;
+
+            // 绘制K线图
+            drawKlineChart(technical);
+
+            // 判断依据
+            const reasonsHTML = `
+                <div style="background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #1976d2; margin-bottom: 10px;">📊 技术面综合评估</div>
+                    <div style="color: #666; line-height: 1.6;">
+                        <div style="margin-bottom: 10px;">
+                            <strong>• K线形态:</strong> 出现红三兵、MACD金叉等看涨形态，多头占优
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>• 成交量:</strong> 放量突破后缩量回调，资金介入明显
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <strong>• 技术指标:</strong> MACD金叉确认，KDJ高位需警惕回调
+                        </div>
+                        <div>
+                            <strong>• 操作建议:</strong> 短期可逢低介入，关注12.80元压力位
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('reasonsBox').innerHTML = reasonsHTML;
+        }
+
+        function drawKlineChart(technical) {
+            const canvas = document.getElementById('klineCanvas');
+            if (!canvas) return;
+
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            const padding = { top: 20, right: 50, bottom: 30, left: 10 };
+            
+            const chartWidth = width - padding.left - padding.right;
+            const chartHeight = height - padding.top - padding.bottom;
+
+            // 计算价格范围
+            const allPrices = technical.kline_data.flatMap(d => [d.high, d.low]);
+            const minPrice = Math.min(...allPrices) * 0.998;
+            const maxPrice = Math.max(...allPrices) * 1.002;
+            const priceRange = maxPrice - minPrice;
+
+            // 计算每个K线的位置
+            const candleWidth = chartWidth / technical.kline_data.length * 0.6;
+            const candleGap = chartWidth / technical.kline_data.length;
+
+            let html = '';
+
+            // 绘制均线
+            const maLines = [
+                { name: 'MA5', value: technical.ma_data.ma5, color: '#ff6b6b' },
+                { name: 'MA10', value: technical.ma_data.ma10, color: '#ffd93d' },
+                { name: 'MA20', value: technical.ma_data.ma20, color: '#6bcb77' }
+            ];
+
+            maLines.forEach(ma => {
+                const y = padding.top + ((maxPrice - ma.value) / priceRange) * chartHeight;
+                html += `<div class="ma-line ma-${ma.name.split('MA')[1]}" style="top: ${y}px; left: ${padding.left}px; width: ${chartWidth}px;"></div>`;
+                html += `<div style="position: absolute; left: ${padding.left + chartWidth + 5}px; top: ${y - 8}px; font-size: 0.75em; color: ${ma.color}; font-weight: 600;">MA${ma.name.split('MA')[1]}</div>`;
+            });
+
+            // 绘制K线
+            technical.kline_data.forEach((d, i) => {
+                const x = padding.left + i * candleGap + candleGap / 2;
+                const isUp = d.close > d.open;
+                
+                const highY = padding.top + ((maxPrice - d.high) / priceRange) * chartHeight;
+                const lowY = padding.top + ((maxPrice - d.low) / priceRange) * chartHeight;
+                const openY = padding.top + ((maxPrice - d.open) / priceRange) * chartHeight;
+                const closeY = padding.top + ((maxPrice - d.close) / priceRange) * chartHeight;
+
+                html += `
+                    <div class="candle ${isUp ? 'up' : 'down'}" style="left: ${x}px; top: ${highY}px; height: ${lowY - highY}px;">
+                        <div class="candle-line"></div>
+                        <div class="candle-body" style="top: ${Math.min(openY, closeY) - highY}px; height: ${Math.abs(closeY - openY)}px;"></div>
+                    </div>
+                    <div style="position: absolute; left: ${x - candleWidth/2}px; top: ${padding.top + chartHeight + 5}px; font-size: 0.7em; color: #666; transform: translateX(-50%);">${d.date}</div>
+                `;
+
+                // 价格标签
+                if (i === technical.kline_data.length - 1) {
+                    html += `<div style="position: absolute; left: ${x + candleWidth}px; top: ${closeY - 8}px; font-size: 0.8em; color: ${isUp ? '#f44336' : '#4caf50'}; font-weight: 600;">¥${d.close}</div>`;
+                }
+            });
+
+            // Y轴刻度
+            for (let i = 0; i <= 4; i++) {
+                const price = minPrice + (priceRange * i / 4);
+                const y = padding.top + (chartHeight * (1 - i / 4));
+                html += `<div style="position: absolute; right: 5px; top: ${y - 6}px; font-size: 0.75em; color: #999;">${price.toFixed(2)}</div>`;
+                html += `<div style="position: absolute; left: 0; right: 0; top: ${y}px; border-top: 1px dashed #e0e0e0;"></div>`;
+            }
+
+            canvas.innerHTML = html;
+        }
+
+        window.onload = function() {
+            console.log('CMoney 系统已就绪');
+        };
+    </script>
+</body>
+</html>

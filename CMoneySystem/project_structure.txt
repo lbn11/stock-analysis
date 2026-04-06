@@ -1,0 +1,34 @@
+CMoneySystem/
+├── api/                 # API接口层
+│   ├── __init__.py
+│   ├── routes.py        # 路由定义
+│   └── controllers.py   # 控制器逻辑
+├── data/                # 数据处理层
+│   ├── __init__.py
+│   ├── collector.py     # 数据收集模块
+│   ├── processor.py     # 数据处理器
+│   └── storage.py       # 数据存储
+├── models/              # 数据模型
+│   ├── __init__.py
+│   ├── stock_analysis.py # 股票分析模型
+│   └── prediction.py    # 预测模型
+├── services/            # 业务逻辑层
+│   ├── __init__.py
+│   ├── analysis_engine.py # 分析引擎
+│   ├── factor_analyzer.py # 因子分析器
+│   └── prediction_service.py # 预测服务
+├── utils/               # 工具函数
+│   ├── __init__.py
+│   ├── constants.py     # 常量定义
+│   ├── helpers.py       # 辅助函数
+│   └── validators.py    # 数据验证
+├── tests/               # 测试文件
+│   ├── __init__.py
+│   ├── test_analysis.py
+│   └── test_prediction.py
+├── docs/                # 文档
+│   └── api_documentation.md
+├── requirements.txt     # 依赖包列表
+├── config.py           # 配置文件
+├── main.py             # 主程序入口
+└── README.md           # 项目说明
